@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Filter Expression</title>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+        <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+        <script>
+            var info_dict_ft1 = {{ info_dict_ft1|tojson }};
+            var info_dict_ft2 = {{ info_dict_ft2|tojson }};
+            var ft1_file_name = {{ ft1_file_name }};
+            var ft2_file_name = {{ ft2_file_name }};
+            var initialPlotUrl = "{{ plot_url if plot_url else '' }}";
+        </script>
+        <script src="{{ url_for('static', filename='script.js') }}"></script>
+    </head>
+    <body>
+        <h1>Filter Expression</h1>
+        <div class="container">
+            <div class="column-selector">
+                <h3>Select FT2 Columns:</h3>
+                <div class="checkbox-list">
+                    {% for col, info in info_dict_ft2.items() %}
+                    <label>
+                        <input type="checkbox" class="col-toggle" data-col="{{ col }}"
+                        {% if info.default %}checked{% endif %}>
+                        {{ col }}
+                    </label><br>
+                    {% endfor %}
+                </div><br>
+                <div>
+                    <button type="button" onclick="resetDefaultColumns()">Reset Columns</button>
+                </div>
+            </div>
+            <div class="filters">
+                <h3>Select Filters:</h3>
+                <form id="filters-form">
+                    <div class="slider-grid">
+                        <h3>FT2:</h3>
+                        <br>
+                        {% for col, info in info_dict_ft2.items() %}
+                        <div class="slider-item">
+                            <label>{{col}} [{{info.unit}}]:
+                                <br><span id="{{col}}_min_val">{{info.min}}</span> - <span id="{{col}}_max_val">{{info.max}}</span>
+                                <div id="{{col}}_slider" class="slider-range"></div>
+                                <input type="hidden" id="{{col}}_min" value="{{info.min}}">
+                                <input type="hidden" id="{{col}}_max" value="{{info.max}}">
+                            </label><br>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="inputs-grid">
+                        <h3>FT1:</h3>
+                        <div>
+                            <label style="display: inline-block; margin-right: 10px;">
+                                Use ROI Cut:
+                                <input type="checkbox" id="roicut">
+                            </label>
+                        </div>
+                        <div>
+                            <label style="display: inline-block; margin-right: 10px;">
+                                RA:
+                                <input type="text" id="ra" oninput="updateFilterExpr()">
+                            </label>
+                            <label style="display: inline-block; margin-right: 10px;">
+                                DEC:
+                                <input type="text" id="dec" oninput="updateFilterExpr()">
+                            </label>
+                            <label style="display: inline-block; margin-right: 10px;">
+                                Radius:
+                                <input type="text" id="radius" oninput="updateFilterExpr()">
+                            </label>
+                        </div>
+                        <div class="ft1-slider-grid">
+                            {% for col, info in info_dict_ft1.items() %}
+                            <div class="slider-item">
+                                <label>{{info.name}} [{{info.unit}}]:
+                                    <br><span id="{{col}}_min_val">{{info.min}}</span> - <span id="{{col}}_max_val">{{info.max}}</span>
+                                    <div id="{{col}}_slider" class="slider-range"></div>
+                                    <input type="hidden" id="{{col}}_min" value="{{info.min}}">
+                                    <input type="hidden" id="{{col}}_max" value="{{info.max}}">
+                                </label><br>
+                            </div>
+                            {% endfor %}    
+                        </div>
+                        <div class="input-container">
+                            <div class="input-item">
+                                <label>Additional Custom Filter:</label>
+                                <input type="text" id="custom_filter" oninput="updateFilterExpr()" class="resizable-input">
+                            </div>
+                            <div class="input-item">
+                                <label>Filter Expression:</label>
+                                <input type="text" id="filter_expr" oninput="manualUpdateFilterExpr()" class="resizable-input">
+                            </div>
+                        </div>
+                        <br>
+                        <div>
+                            <button type="button" id="apply-filters">Save Results</button>
+                            <button type="button" onclick="resetSliders()">Reset</button>
+                        </div>
+                        <div>
+                            <label style="display: inline-block; margin-right: 10px;">
+                                Update Plot:
+                                <input type="checkbox" id="update-plot-btn" checked>
+                            </label>
+                        </div>
+                        
+                    </div>
+                </form>
+            </div>
+            <div class="plot" id="plot-container">
+                <h3>Plot and filter: </h3>
+                <div id="plot-box" class="plot-box">
+                    {% if plot_url %}
+                    <img id="plot-image" src="{{ plot_url }}" alt="Filtered Data Plot" style="max-width: 100%; max-height: 100%;">
+                    {% else %}
+                    <p>No plot available</p>
+                    {% endif %}
+                </div>
+                <input type="hidden" id="ft1_filters_dict" value="{}">
+                <input type="hidden" id="ft2_filters_dict" value="{}">
+                <div id="filter-info">
+                    <p><span id="filter-info-text">No filters applied.</span></p>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

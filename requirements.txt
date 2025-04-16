@@ -1,0 +1,5 @@
+# for the gt_apps module of the fermitools -> https://github.com/fermi-lat/Fermitools-conda/wiki/Installation-Instructions
+astropy
+flask
+matplotlib
+numpy

@@ -1,0 +1,91 @@
+.container {
+    display: flex;
+}
+
+.column-selector {
+    width: 200px;
+    margin-right: 10px;
+}
+
+.checkbox-list {
+    max-height: 50%;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 5px;
+}
+
+.filters {
+    flex: 1;
+    margin-right: 10px;
+    max-height: 70vh;
+}
+
+.plot {
+    flex: 1;
+}
+
+.slider-grid {
+    display: grid;
+    max-height: 50vh;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 20px;
+    margin-bottom: 10px;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.ft1-slider-grid {
+    display: grid;
+    max-height: 50vh;
+    overflow-y: auto;
+    /* margin-bottom: 10px; */
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.inputs-grid {
+    border: 1px solid #ccc;
+    padding: 20px;
+}
+
+.slider-item {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.slider-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.slider-range {
+    margin: 10px 0;
+}
+
+.plot-box {
+    border: 1px solid #ccc;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.input-item {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.resizable-input {
+    width: 100%;
+    resize: horizontal;
+    overflow: auto;
+}
