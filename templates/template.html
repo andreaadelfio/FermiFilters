@@ -73,6 +73,25 @@
                                 <input type="text" id="radius" oninput="updateFilterExpr()">
                             </label>
                         </div>
+                        <div>
+                            <label style="display: inline-block; margin-right: 10px;">
+                                Use Ecliptic Cut:
+                                <input type="checkbox" id="eclipticcut" onchange="updateFilterExpr()">
+                            </label>
+                            <label style="display: inline-block; margin-right: 10px;">
+                                Radius:
+                                <input type="text" id="eclipticradius" oninput="updateFilterExpr()">
+                            </label>
+                            <label style="display: inline-block; margin-right: 10px;">
+                                Operator:
+                                <select id="eclipticoperator" onchange="updateFilterExpr()" default="lt">
+                                    <option value="lt">Less than (<)</option>
+                                    <option value="gt">Greater than (>)</option>
+                                    <option value="lte">Less than or equal to (<=)</option>
+                                    <option value="gte">Greater than or equal to (>=)</option>
+                                </select>
+                            </label>
+                        </div>
                         <div class="ft1-slider-grid">
                             {% for col, info in info_dict_ft1.items() %}
                             <div class="slider-item">
@@ -121,6 +140,7 @@
                 </div>
                 <input type="hidden" id="ft1_filters_dict" value="{}">
                 <input type="hidden" id="ft2_filters_dict" value="{}">
+                <input type="hidden" id="ecliptic_cut_dict" value="{}">
                 <div id="filter-info">
                     <p><span id="filter-info-text">No filters applied.</span></p>
                 </div>

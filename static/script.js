@@ -55,6 +55,7 @@ $(function() {
         const roicut = $('#roicut').is(':checked') ? 'on' : 'off';
         const select_dict = $('#ft1_filters_dict').val();
         const maketime_dict = $('#ft2_filters_dict').val();
+        const ecliptic_cut_dict = $('#ecliptic_cut_dict').val();
         const update_plot = $('#update-plot-btn').is(':checked') ? 'on' : 'off';
         $.ajax({
             url: '/apply_filters',
@@ -62,6 +63,7 @@ $(function() {
             data: {
                 maketime_dict: maketime_dict,
                 select_dict: select_dict,
+                ecliptic_cut_dict: ecliptic_cut_dict,
                 update_plot: update_plot
             },
             success: function(resp) {
@@ -107,14 +109,21 @@ function updateFilterExpr() {
     let filterExpr = [];
     let ft1_filters_dict = {};
     let ft2_filters_dict = {};
+    let ecliptic_cut_dict = {};
     const radius = $('#radius').val();
     const dec = $('#dec').val();
     const ra = $('#ra').val();
     const roicut = $('#roicut').is(':checked');
+    const eclipticcut = $('#eclipticcut').is(':checked');
+    const eclipticradius = $('#eclipticradius').val();
+    const eclipticoperator = $('#eclipticoperator').val();
     if (radius) ft1_filters_dict.radius = radius;
     if (ra) ft1_filters_dict.ra = ra;
     if (dec) ft1_filters_dict.dec = dec;
     if (roicut) ft2_filters_dict.roicut = roicut;
+    if (eclipticcut) ecliptic_cut_dict.eclipticcut = eclipticcut;
+    if (eclipticradius) ecliptic_cut_dict.eclipticradius = eclipticradius;
+    if (eclipticoperator) ecliptic_cut_dict.eclipticoperator = eclipticoperator;
     for (const [col, info] of Object.entries(info_dict_ft2)) {
         let minVal = parseFloat($(`#${col}_min`).val());
         let maxVal = parseFloat($(`#${col}_max`).val());
@@ -137,6 +146,7 @@ function updateFilterExpr() {
     if (finalExpr !== '') ft2_filters_dict.filter_expr = finalExpr;
     $('#ft1_filters_dict').val(JSON.stringify(ft1_filters_dict));
     $('#ft2_filters_dict').val(JSON.stringify(ft2_filters_dict));
+    $('#ecliptic_cut_dict').val(JSON.stringify(ecliptic_cut_dict));
     $('#filter-info-text').text(finalExpr.trim() ? 'Filters: ' + finalExpr : 'No filters applied');
 }
 

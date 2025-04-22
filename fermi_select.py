@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from flask import Flask, render_template, request, url_for, jsonify
 from astropy.io import fits
+from astropy.coordinates import SkyCoord
+from scipy.interpolate import interp1d
+import astropy.units as u
 import gt_apps
 
 matplotlib.use('Agg')
@@ -89,6 +92,66 @@ def gtmktime(maketime_dict, ft1_file, ft2_file, output_file) -> bool:
         gt_apps.maketime.run(print_command=False)
     except Exception as e:
         logging.error("Error during gtmktime: %s", e)
+        return False
+    return True
+
+def ecliptic_cut(ecliptic_cut_dict, ft1_file, ft2_file, output_file) -> bool:
+    '''
+    Applies an ecliptic cut to the input FT1 file based on the input FT2 file.
+
+    Parameters:
+    ----------
+        ecliptic_cut_dict: Dictionary containing the ecliptic cut criteria.
+        ft1_file: Input FT1 file.
+        ft2_file: Input FT2 file.
+        output_file: Output FT1 file.
+    '''
+    with fits.open(ft1_file) as hdul:
+        ft1_events = hdul['EVENTS'].data
+        ft1_header_events = hdul['EVENTS'].header
+        ft1_header_primary = hdul['PRIMARY'].header
+        ft1_gti = hdul['GTI'].copy()
+
+        evt_time = ft1_events['TIME']
+        evt_ra = ft1_events['RA']
+        evt_dec = ft1_events['DEC']
+
+    with fits.open(ft2_file) as hdul2:
+        sc_data = hdul2[1].data
+        sc_time = sc_data['START']
+        sc_ra_sun = sc_data['RA_SUN']
+        sc_dec_sun = sc_data['DEC_SUN']
+
+    interp_ra = interp1d(sc_time, sc_ra_sun, kind='linear', fill_value='extrapolate')
+    interp_dec = interp1d(sc_time, sc_dec_sun, kind='linear', fill_value='extrapolate')
+
+    sun_ra_evt = interp_ra(evt_time)
+    sun_dec_evt = interp_dec(evt_time)
+
+    evt_coords = SkyCoord(evt_ra * u.deg, evt_dec * u.deg, frame='icrs')
+    sun_coords_evt = SkyCoord(sun_ra_evt * u.deg, sun_dec_evt * u.deg, frame='icrs')
+    sep = evt_coords.separation(sun_coords_evt)
+    degree_sep = float(ecliptic_cut_dict['eclipticradius']) if 'eclipticradius' in ecliptic_cut_dict else 0
+    operator = ecliptic_cut_dict['eclipticoperator'] if 'eclipticoperator' in ecliptic_cut_dict else '>'
+    if operator == 'lt':
+        mask = sep < degree_sep * u.deg
+    elif operator == 'gt':
+        mask = sep > degree_sep * u.deg
+    elif operator == 'lte':
+        mask = sep <= degree_sep * u.deg
+    elif operator == 'gte':
+        mask = sep >= degree_sep * u.deg
+    filtered_events = ft1_events[mask]
+
+    primary_hdu = fits.PrimaryHDU(header=ft1_header_primary)
+    events_hdu = fits.BinTableHDU(data=filtered_events, header=ft1_header_events, name='EVENTS')
+    gti_hdu = ft1_gti
+    hdul_out = fits.HDUList([primary_hdu, events_hdu, gti_hdu])
+    logging.info(" ecliptic_cut: running with following parameters \n - ft1: %s\n - ft2: %s\n - radius: %s\n - operator: %s", ft1_file, ft2_file, degree_sep, operator)
+    try:
+        hdul_out.writeto(output_file, overwrite=True)
+    except Exception as e:
+        logging.error("Error during ecliptic_cut: %s", e)
         return False
     return True
 
@@ -207,11 +270,13 @@ def apply_filters():
     ft2_file = "lat_spacecraft_weekly_w018_p310_v001.fits"
     select_dict = json.loads(request.form.get('select_dict', None))
     maketime_dict = json.loads(request.form.get('maketime_dict', None))
+    ecliptic_cut_dict = json.loads(request.form.get('ecliptic_cut_dict', None))
     update_plot = request.form.get('update_plot', 'off') == 'on'
     select_output_file = f"select_{ft1_file}"
     mktime_output_file = f"mktime_{ft1_file}"
+    ecliptic_cut_output_file = f"ecliptic_cut_{ft1_file}"
     plot_filename = "static/plot.png"
-    if not select_dict and not maketime_dict:
+    if not select_dict and not maketime_dict and not ecliptic_cut_dict:
         return jsonify({"plot_url": None})
     plots_list = [ft1_file]
     if select_dict:
@@ -219,14 +284,23 @@ def apply_filters():
             return jsonify({"error": "Error during gtselect on FT1."})
         if update_plot:
             plots_list.append(select_output_file)
-            plot_ft_data(plots_list, x='RA', y='DEC', plot_filename=plot_filename)
+            # plot_ft_data(plots_list, x='RA', y='DEC', plot_filename=plot_filename)
         ft1_file = select_output_file
     if maketime_dict:
         if not gtmktime(maketime_dict, ft1_file, ft2_file, mktime_output_file):
             return jsonify({"error": "Error during gtmktime."})
         if update_plot:
             plots_list.append(mktime_output_file)
-            plot_ft_data(plots_list, x='RA', y='DEC', plot_filename=plot_filename)
+            # plot_ft_data(plots_list, x='RA', y='DEC', plot_filename=plot_filename)
+        ft1_file = mktime_output_file
+    if ecliptic_cut_dict:
+        if not ecliptic_cut(ecliptic_cut_dict, ft1_file, ft2_file, ecliptic_cut_output_file):
+            return jsonify({"error": "Error during ecliptic cut."})
+        if update_plot:
+            plots_list.append(ecliptic_cut_output_file)
+    print("Plotting data...")
+    if update_plot:
+        plot_ft_data(plots_list, x='RA', y='DEC', plot_filename=plot_filename)
     return jsonify({"plot_url": url_for('static', filename='plot.png')})
 
 if __name__ == '__main__':
