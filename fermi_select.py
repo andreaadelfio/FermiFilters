@@ -153,6 +153,14 @@ def ecliptic_cut(ecliptic_cut_dict, ft1_file, ft2_file, output_file) -> bool:
     except Exception as e:
         logging.error("Error during ecliptic_cut: %s", e)
         return False
+    if operator in ['lt', 'lte']:
+        sun_ra_mean, sun_dec_mean = np.mean(sun_ra_evt), np.mean(sun_dec_evt)
+        sun_coords_mean = SkyCoord(sun_ra_mean * u.deg, sun_dec_mean * u.deg, frame='icrs')
+        evt_coords = SkyCoord(filtered_events['RA'] * u.deg, filtered_events['DEC'] * u.deg, frame='icrs')
+        sep_mean = evt_coords.separation(sun_coords_mean)
+        degree_sep_mean = float(np.ceil(max(sep_mean.deg)))
+        select_dict = {'ra': sun_ra_mean, 'dec': sun_dec_mean, 'radius': degree_sep_mean}
+        gtselect(select_dict, output_file, f'select_{output_file}')
     return True
 
 def plot_ft_data(ft_file_list, x, y, plot_filename):
@@ -238,7 +246,8 @@ def read_info_from_ft1(ft_file) -> dict:
         'min': 0,
         'dtype': 'int16',
         'unit': 'deg',
-        'disabled': 1
+        'disabled': 1,
+        'default': 1
     }
     info_dict['energy'] = {
         'name': 'Energy',
@@ -247,6 +256,7 @@ def read_info_from_ft1(ft_file) -> dict:
         'dtype': 'int16',
         'unit': 'MeV',
         'disabled': 1,
+        'default': 1
     }
     return info_dict
 
@@ -284,21 +294,18 @@ def apply_filters():
             return jsonify({"error": "Error during gtselect on FT1."})
         if update_plot:
             plots_list.append(select_output_file)
-            # plot_ft_data(plots_list, x='RA', y='DEC', plot_filename=plot_filename)
         ft1_file = select_output_file
     if maketime_dict:
         if not gtmktime(maketime_dict, ft1_file, ft2_file, mktime_output_file):
             return jsonify({"error": "Error during gtmktime."})
         if update_plot:
             plots_list.append(mktime_output_file)
-            # plot_ft_data(plots_list, x='RA', y='DEC', plot_filename=plot_filename)
         ft1_file = mktime_output_file
     if ecliptic_cut_dict:
         if not ecliptic_cut(ecliptic_cut_dict, ft1_file, ft2_file, ecliptic_cut_output_file):
             return jsonify({"error": "Error during ecliptic cut."})
         if update_plot:
             plots_list.append(ecliptic_cut_output_file)
-    print("Plotting data...")
     if update_plot:
         plot_ft_data(plots_list, x='RA', y='DEC', plot_filename=plot_filename)
     return jsonify({"plot_url": url_for('static', filename='plot.png')})

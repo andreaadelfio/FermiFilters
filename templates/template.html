@@ -53,24 +53,28 @@
                     </div>
                     <div class="inputs-grid">
                         <h3>FT1:</h3>
-                        <div>
+                        <!-- <div>
                             <label style="display: inline-block; margin-right: 10px;">
                                 Use ROI Cut:
                                 <input type="checkbox" id="roicut">
                             </label>
-                        </div>
+                        </div> -->
                         <div>
                             <label style="display: inline-block; margin-right: 10px;">
+                                Use Source Cut:
+                                <input type="checkbox" id="sourcecut" onchange="updateFilterExpr()">
+                            </label>
+                            <label style="display: inline-block; margin-right: 10px;">
                                 RA:
-                                <input type="text" id="ra" oninput="updateFilterExpr()">
+                                <input type="text" id="ra" placeholder="(degrees)" oninput="updateFilterExpr()" disabled>
                             </label>
                             <label style="display: inline-block; margin-right: 10px;">
                                 DEC:
-                                <input type="text" id="dec" oninput="updateFilterExpr()">
+                                <input type="text" id="dec" placeholder="(degrees)" oninput="updateFilterExpr()" disabled>
                             </label>
                             <label style="display: inline-block; margin-right: 10px;">
                                 Radius:
-                                <input type="text" id="radius" oninput="updateFilterExpr()">
+                                <input type="text" id="radius" placeholder="(degrees)" oninput="updateFilterExpr()" disabled>
                             </label>
                         </div>
                         <div>
@@ -80,11 +84,11 @@
                             </label>
                             <label style="display: inline-block; margin-right: 10px;">
                                 Radius:
-                                <input type="text" id="eclipticradius" oninput="updateFilterExpr()">
+                                <input type="text" id="eclipticradius" placeholder="(degrees)" oninput="updateFilterExpr()" disabled>
                             </label>
                             <label style="display: inline-block; margin-right: 10px;">
                                 Operator:
-                                <select id="eclipticoperator" onchange="updateFilterExpr()" default="lt">
+                                <select id="eclipticoperator" onchange="updateFilterExpr()" default="lt" disabled>
                                     <option value="lt">Less than (<)</option>
                                     <option value="gt">Greater than (>)</option>
                                     <option value="lte">Less than or equal to (<=)</option>

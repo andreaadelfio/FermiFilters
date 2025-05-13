@@ -49,48 +49,62 @@ $(function() {
     // Aggiorna con updateFilterExpr se cambia custom_filter
     $('#custom_filter').on('input', updateFilterExpr);
 
+    $('#eclipticcut').on('change', function() {
+        const isChecked = $(this).is(':checked');
+        $('#eclipticradius').prop('disabled', !isChecked);
+        $('#eclipticoperator').prop('disabled', !isChecked);
+    });
+
+    $('#sourcecut').on('change', function() {
+        const isChecked = $(this).is(':checked');
+        $('#ra').prop('disabled', !isChecked);
+        $('#dec').prop('disabled', !isChecked);
+        $('#radius').prop('disabled', !isChecked);
+    });
+
     // Pulsante "Aggiorna Plot" => invio Ajax
     $('#apply-filters').on('click', function() {
-        const filterExpr = $('#filter_expr').val();
-        const roicut = $('#roicut').is(':checked') ? 'on' : 'off';
-        const select_dict = $('#ft1_filters_dict').val();
-        const maketime_dict = $('#ft2_filters_dict').val();
-        const ecliptic_cut_dict = $('#ecliptic_cut_dict').val();
-        const update_plot = $('#update-plot-btn').is(':checked') ? 'on' : 'off';
-        $.ajax({
-            url: '/apply_filters',
-            type: 'POST',
-            data: {
-                maketime_dict: maketime_dict,
-                select_dict: select_dict,
-                ecliptic_cut_dict: ecliptic_cut_dict,
-                update_plot: update_plot
-            },
-            success: function(resp) {
-                if (resp.error) {
-                    alert(resp.error);
-                } else {
-                    if (resp.plot_url && update_plot === 'on') {
-                        $('#plot-image').attr('src', resp.plot_url + '?' + new Date().getTime()).show();
-                        $('#plot-box').html(`<img id="plot-image" src="${resp.plot_url + '?' + new Date().getTime()}" alt="Filtered Data Plot" style="max-width: 100%; max-height: 100%;">`);
+        if (validateInputs()) {
+            const filterExpr = $('#filter_expr').val();
+            // const roicut = $('#roicut').is(':checked') ? 'on' : 'off';
+            const select_dict = $('#ft1_filters_dict').val();
+            const maketime_dict = $('#ft2_filters_dict').val();
+            const ecliptic_cut_dict = $('#ecliptic_cut_dict').val();
+            const update_plot = $('#update-plot-btn').is(':checked') ? 'on' : 'off';
+            $.ajax({
+                url: '/apply_filters',
+                type: 'POST',
+                data: {
+                    maketime_dict: maketime_dict,
+                    select_dict: select_dict,
+                    ecliptic_cut_dict: ecliptic_cut_dict,
+                    update_plot: update_plot
+                },
+                success: function(resp) {
+                    if (resp.error) {
+                        alert(resp.error);
                     } else {
-                        $('#plot-box').html('<p>No available plot</p>');
+                        if (resp.plot_url && update_plot === 'on') {
+                            $('#plot-image').attr('src', resp.plot_url + '?' + new Date().getTime()).show();
+                            $('#plot-box').html(`<img id="plot-image" src="${resp.plot_url + '?' + new Date().getTime()}" alt="Filtered Data Plot" style="max-width: 100%; max-height: 100%;">`);
+                        } else {
+                            $('#plot-box').html('<p>No available plot</p>');
+                        }
+
+                        let filtersApplied = [];
+                        if (filterExpr) filtersApplied.push(`Filters: ${filterExpr}`);
+                        // if (roicut === 'on') filtersApplied.push('ROI cut');
+
+                        $('#filter-info-text').text(filtersApplied
+                            ? filtersApplied.join(' | ')
+                            : 'No filters applied');
                     }
-
-                    let filtersApplied = [];
-                    if (filterExpr) filtersApplied.push(`Filters: ${filterExpr}`);
-                    if (roicut === 'on') filtersApplied.push('ROI cut');
-                    // if (zenith_angle) filtersApplied.push(`Zenith angle cut: ${zenith_angle}`);
-
-                    $('#filter-info-text').text(filtersApplied
-                        ? filtersApplied.join(' | ')
-                        : 'No filters applied');
+                },
+                error: function() {
+                    alert('Error during plot update.');
                 }
-            },
-            error: function() {
-                alert('Error during plot update.');
-            }
-        });
+            });
+        }
     });
 });
 
@@ -113,17 +127,21 @@ function updateFilterExpr() {
     const radius = $('#radius').val();
     const dec = $('#dec').val();
     const ra = $('#ra').val();
+    const sourcecut = $('#sourcecut').is(':checked');
     const roicut = $('#roicut').is(':checked');
     const eclipticcut = $('#eclipticcut').is(':checked');
     const eclipticradius = $('#eclipticradius').val();
     const eclipticoperator = $('#eclipticoperator').val();
-    if (radius) ft1_filters_dict.radius = radius;
-    if (ra) ft1_filters_dict.ra = ra;
-    if (dec) ft1_filters_dict.dec = dec;
+    if (sourcecut && radius && dec && ra) {
+        ft1_filters_dict.radius = radius;
+        ft1_filters_dict.ra = ra;
+        ft1_filters_dict.dec = dec;
+    }
     if (roicut) ft2_filters_dict.roicut = roicut;
-    if (eclipticcut) ecliptic_cut_dict.eclipticcut = eclipticcut;
-    if (eclipticradius) ecliptic_cut_dict.eclipticradius = eclipticradius;
-    if (eclipticoperator) ecliptic_cut_dict.eclipticoperator = eclipticoperator;
+    if (eclipticcut && eclipticradius && eclipticoperator) {
+        ecliptic_cut_dict.eclipticradius = eclipticradius;
+        ecliptic_cut_dict.eclipticoperator = eclipticoperator;
+    }
     for (const [col, info] of Object.entries(info_dict_ft2)) {
         let minVal = parseFloat($(`#${col}_min`).val());
         let maxVal = parseFloat($(`#${col}_max`).val());
@@ -183,4 +201,65 @@ function resetDefaultColumns() {
             $(`#${col}_slider`).closest('.slider-item').show();
         }
     }
+}
+
+function validateInputs() {
+    let isValid = true;
+    let errorMessage = '';
+    const sourcecut = document.getElementById('sourcecut').checked;
+    if (sourcecut) {
+        const raInput = document.getElementById('ra');
+        const decInput = document.getElementById('dec');
+        const radiusInput = document.getElementById('radius');
+        
+        const ra = raInput && raInput.value ? parseFloat(raInput.value) : NaN;
+        const dec = decInput && decInput.value ? parseFloat(decInput.value) : NaN;
+        const radius = radiusInput && radiusInput.value ? parseFloat(radiusInput.value) : NaN;
+
+        let isValid = !isNaN(ra) && !isNaN(dec) && !isNaN(radius);
+        if (!isValid) {
+            errorMessage = 'Please fill in all required fields.\n';
+        } else {
+            errorMessage = '';
+            // Validate RA (0 to 360 degrees)
+            if (isNaN(ra) || ra < 0 || ra > 360) {
+                isValid = false;
+                errorMessage += 'RA must be a number between 0 and 360.\n';
+            }
+            
+            // Validate DEC (-90 to 90 degrees)
+            if (isNaN(dec) || dec < -90 || dec > 90) {
+                isValid = false;
+                errorMessage += 'DEC must be a number between -90 and 90.\n';
+            }
+            
+            // Validate Radius (positive number)
+            if (isNaN(radius) || radius <= 0) {
+                isValid = false;
+                errorMessage += 'Radius must be a positive number.\n';
+            }
+        }
+        console.log(isValid, errorMessage);
+        if (!isValid) {
+            alert(errorMessage);
+        }
+    }
+    
+    const eclipticcut = document.getElementById('eclipticcut').checked;
+    if (eclipticcut) {
+        let errorMessage = '';
+        const eclipticradiusInput = document.getElementById('eclipticradius');
+
+        const eclipticradius = eclipticradiusInput && eclipticradiusInput.value ? parseFloat(eclipticradiusInput.value) : NaN;
+
+        if (isNaN(eclipticradius) || eclipticradius <= 0) {
+            isValid = false;
+            errorMessage += 'Ecliptic radius must be a positive number.\n';
+        }
+        if (!isValid) {
+            alert(errorMessage);
+        }
+    }
+
+    return isValid;
 }
