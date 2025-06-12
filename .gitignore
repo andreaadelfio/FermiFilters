@@ -1,3 +1,5 @@
 *.fits
 *.par
-/static/*.png
+
+/static/*_tmp
+/__pycache__/

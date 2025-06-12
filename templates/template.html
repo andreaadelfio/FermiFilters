@@ -10,13 +10,16 @@
         <script>
             var info_dict_ft1 = {{ info_dict_ft1|tojson }};
             var info_dict_ft2 = {{ info_dict_ft2|tojson }};
-            var ft1_file_name = {{ ft1_file_name }};
-            var ft2_file_name = {{ ft2_file_name }};
+            var ft1_file_name = "{{ ft1_file_name }}";
+            var ft2_file_name = "{{ ft2_file_name }}";
             var initialPlotUrl = "{{ plot_url if plot_url else '' }}";
         </script>
         <script src="{{ url_for('static', filename='script.js') }}"></script>
     </head>
     <body>
+        <div id="spinner-overlay">
+            <div class="spinner"></div>
+        </div>
         <h1>Filter Expression</h1>
         <div class="container">
             <div class="column-selector">
@@ -129,7 +132,9 @@
                                 <input type="checkbox" id="update-plot-btn" checked>
                             </label>
                         </div>
-                        
+                        <div>
+                            <button type="button" onclick="window.location.href='/download_all'">Download All</button>
+                        </div>
                     </div>
                 </form>
             </div>
