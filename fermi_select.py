@@ -3,7 +3,7 @@ import os
 import logging
 import zipfile
 import io
-from flask import Flask, render_template, request, jsonify, session, send_file
+from flask import Blueprint, render_template, request, jsonify, session, send_file
 from core.engine import FiltersEngine
 from core.utils import Plotter, FitsReader, FilesHandler, VOHandler
 from core.config import TMP_DIR
@@ -11,10 +11,10 @@ from core.config import TMP_DIR
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
 
 
-app = Flask(__name__)
-app.secret_key = '1234'
+fermifilters = Blueprint('FermiFilters', __name__)
+fermifilters.secret_key = '1234'
 
-@app.route('/')
+@fermifilters.route('/')
 def index():
     vo_file = os.path.join(TMP_DIR, 'fermi_vo.xml')
     files_dict = VOHandler().get_files_dict(vo_file)
@@ -49,7 +49,7 @@ def index():
                             ft2_file_name=ft2_file,
                             plot_url=plot_url)
 
-@app.route('/apply_filters', methods=['POST'])
+@fermifilters.route('/apply_filters', methods=['POST'])
 def apply_filters():
     plot_filename = session.get('plot_url')
     ft1_filepath = session.get('ft1_file_name')
@@ -87,7 +87,7 @@ def apply_filters():
     return jsonify({"plot_url": plot_filename})
 
 
-@app.route('/download_all')
+@fermifilters.route('/download_all')
 def download_all():
     files_to_zip = []
     for fname in os.listdir(TMP_DIR):
@@ -101,7 +101,3 @@ def download_all():
             zipf.write(file_path, arcname=os.path.basename(file_path))
     zip_buffer.seek(0)
     return send_file(zip_buffer, mimetype='application/zip', as_attachment=True, download_name='fermi_results.zip')
-
-if __name__ == '__main__':
-
-    app.run(debug=True)
