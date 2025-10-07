@@ -14,9 +14,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(mess
 fermifilters = Blueprint('FermiFilters', __name__)
 fermifilters.secret_key = '1234'
 
-@fermifilters.route('/')
+@fermifilters.route('/tool', methods=['POST'])
 def index():
     vo_file = os.path.join(TMP_DIR, 'fermi_vo.xml')
+    print(request.form)
     files_dict = VOHandler().get_files_dict(vo_file)
     fts_list = FilesHandler().download_from_url(files_dict)
     weeks_list = files_dict.keys()
@@ -101,3 +102,10 @@ def download_all():
             zipf.write(file_path, arcname=os.path.basename(file_path))
     zip_buffer.seek(0)
     return send_file(zip_buffer, mimetype='application/zip', as_attachment=True, download_name='fermi_results.zip')
+
+if __name__ == '__main__':
+    from flask import Flask
+    app = Flask(__name__)
+    app.secret_key = 'your_secret_key'
+    app.register_blueprint(fermifilters)
+    app.run(debug=True)

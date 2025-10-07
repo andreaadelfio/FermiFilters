@@ -177,4 +177,10 @@ class VOHandler:
                             'lat_spacecraft_weekly_w010_p310_v001.fits':
                             'https://minio.131.154.99.174.myip.cloud.infn.it/spoke3/spoke3/fermi_spacecraft__lat_spacecraft_weekly_w010_p310_v001__0?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=icsc%2F20250612%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20250612T152759Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=1a42075654f2f932332aea8a2ca7dcc65a84eb318530c83f581024c6dba0f021'}
             }
+        files_dict = {'w009': {'lat_photon_weekly_w009_p305_v001.fits':
+                                "https://heasarc.gsfc.nasa.gov/FTP/fermi/data/lat/weekly/photon/lat_photon_weekly_w009_p305_v001.fits",
+                                'lat_spacecraft_weekly_w009_p310_v001.fits':
+                                'https://heasarc.gsfc.nasa.gov/FTP/fermi/data/lat/weekly/spacecraft/lat_spacecraft_weekly_w009_p310_v001.fits'}
+            }
+        
         return files_dict
