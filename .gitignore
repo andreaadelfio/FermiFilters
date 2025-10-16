@@ -1,5 +1,7 @@
 *.fits
 *.par
+*.xml
+/core/__pycache__/*.pyc
 
 /static/*_tmp
 /core/__pycache__

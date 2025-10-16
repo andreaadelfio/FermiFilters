@@ -180,19 +180,18 @@ class VOHandler:
             fields = [field.attrib['name'] for field in table.findall('vot:FIELD', ns)]
             did_idx = fields.index('did_name')
             url_idx = fields.index('access_url')
+            week_idx = fields.index('week')
 
             for tr in table.findall('.//vot:TR', ns):
                 tds = tr.findall('vot:TD', ns)
                 did_name = tds[did_idx].text
                 access_url = tds[url_idx].text
-
+                week = tds[week_idx].text
                 if not did_name.endswith('.fits'):
                     file_name = did_name + '.fits'
-
-                week_match = re.search(r'w\d{3}', file_name)
-                week = week_match.group(0) if week_match else 'unknown'
 
                 if week not in files_dict:
                     files_dict[week] = {}
                 files_dict[week][file_name] = access_url
+        print(files_dict)
         return files_dict
