@@ -14,11 +14,24 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(mess
 fermifilters = Blueprint('FermiFilters', __name__)
 fermifilters.secret_key = '1234'
 
-@fermifilters.route('/tool', methods=['POST'])
+@fermifilters.route('/tool', methods=['GET', 'POST']) # should only be POST
 def index():
+    if request.method == 'POST':
+        ct = request.headers.get('Content-Type', '')
+        if 'xml' in ct:
+            vo_text = request.data.decode('utf-8', errors='ignore')
+            with open(os.path.join(TMP_DIR, 'fermi_vo.xml'), 'w') as f:
+                f.write(vo_text)
+        else:
+            return render_template('error.html', error_message="Invalid content type: expected a VO table in XML format.")
+    return render_template('loading.html')
+
+@fermifilters.route('/process_vo', methods=['GET'])
+def process_vo():
     vo_file = os.path.join(TMP_DIR, 'fermi_vo.xml')
-    print(request.get_json())
-    files_dict = VOHandler().get_files_dict(vo_file)
+    with open(vo_file, 'r') as f:
+        vo_text = f.read()
+    files_dict = VOHandler().get_files_dict(vo_text)
     fts_list = FilesHandler().download_from_url(files_dict)
     weeks_list = files_dict.keys()
     ft1_list = fts_list['photon']

@@ -1,5 +1,7 @@
 $(function() {
-    // Inizializza gli slider
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.style.display = 'none';
+
     for (const [col, info] of Object.entries(Object.assign({}, info_dict_ft2, info_dict_ft1))) {
         $(`#${col}_slider`).slider({
             range: true,
@@ -65,6 +67,8 @@ $(function() {
     // Pulsante "Aggiorna Plot" => invio Ajax
     $('#apply-filters').on('click', function() {
         if (validateInputs()) {
+            const overlay = document.getElementById('loading-overlay');
+            overlay.style.display = 'flex';
             const filterExpr = $('#filter_expr').val();
             // const roicut = $('#roicut').is(':checked') ? 'on' : 'off';
             const select_dict = $('#ft1_filters_dict').val();
@@ -99,6 +103,7 @@ $(function() {
                             ? filtersApplied.join(' | ')
                             : 'No filters applied');
                     }
+                    overlay.style.display = 'none';
                 },
                 error: function() {
                     alert('Error during plot update.');

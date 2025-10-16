@@ -15,57 +15,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(mess
 
 class FiltersEngine:
 
-
-    # def ftmerge_spacecraft_files(self, ft2_file_list, output_file):
-    #     """
-    #     Merges multiple FT2 (spacecraft) files into a single sorted FT2 file.
-
-    #     Parameters
-    #     ----------
-    #     ft2_file_list : list of str
-    #         List of paths to FT2 files to be merged.
-    #     output_file : str
-    #         Path to the output merged FT2 file.
-
-    #     Returns
-    #     -------
-    #     bool
-    #         True if the merge and sort succeeded, False otherwise.
-    #     """
-    #     tmp_list_path = 'static/andrea-adelfio_tmp/ft2_to_be_merged.txt'
-    #     unsorted_file = output_file.replace('.fits', '_unsorted.fits')
-
-    #     os.makedirs(os.path.dirname(tmp_list_path), exist_ok=True)
-    #     with open(tmp_list_path, 'w') as f:
-    #         for file_path in ft2_file_list:
-    #             f.write(file_path + '\n')
-
-    #     logging.info("Merging FT2 files: %s", ft2_file_list)
-
-    #     try:
-    #         # Step 1: merge the files using ftmerge
-    #         merge_cmd = [
-    #             'ftmerge',
-    #             f"@{tmp_list_path}",
-    #             unsorted_file,
-    #             'tables=SC_DATA'
-    #         ]
-    #         subprocess.run(merge_cmd, check=True)
-
-    #         sort_cmd = [
-    #             'ftsort',
-    #             f"infile={unsorted_file}",
-    #             f"outfile={output_file}",
-    #             "columns=START"
-    #         ]
-    #         subprocess.run(sort_cmd, check=True)
-    #         os.remove(unsorted_file)
-    #         return True
-
-    #     except subprocess.CalledProcessError as e:
-    #         logging.error("Error during spacecraft merge: %s", e)
-    #         return False
-
     def ft2_merge(self, ft2_file_list, output_file):
         """
         Merges multiple FT2 (spacecraft) files into a single sorted FT2 file using Astropy.
@@ -131,13 +80,13 @@ class FiltersEngine:
         gt_apps.filter['evtable'] = "EVENTS"
         gt_apps.filter['evtype'] = 3
         gt_apps.filter['outfile'] = output_file
-        gt_apps.filter['zmax'] = 'INDEF'
-        gt_apps.filter['zmin'] = 'INDEF'
-        gt_apps.filter['emin'] = 'INDEF'
-        gt_apps.filter['emax'] = 'INDEF'
-        gt_apps.filter['ra'] = 'INDEF'
-        gt_apps.filter['dec'] = 'INDEF'
-        gt_apps.filter['rad'] = 'INDEF'
+        gt_apps.filter['zmax'] = '180'
+        gt_apps.filter['zmin'] = '0'
+        gt_apps.filter['emin'] = '30'
+        gt_apps.filter['emax'] = '300000'
+        gt_apps.filter['ra'] = '0'
+        gt_apps.filter['dec'] = '0'
+        gt_apps.filter['rad'] = '180'
         logging.info(" gtmerge: running with following parameters \n - infile: %s\n - outfile: %s", gt_apps.filter['infile'], gt_apps.filter['outfile'])
         try:
             gt_apps.filter.run(print_command=False)

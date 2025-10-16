@@ -2,4 +2,4 @@
 *.par
 
 /static/*_tmp
-/__pycache__/
+/core/__pycache__

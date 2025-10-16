@@ -6,6 +6,8 @@ import numpy as np
 import requests
 from .config import TMP_DIR
 import logging
+import xml.etree.ElementTree as ET
+import re
 
 class Plotter:
     matplotlib.use('Agg')
@@ -156,7 +158,7 @@ if __name__ == "__main__":
     print(f"Downloaded files: {files_list}")    
 
 class VOHandler:
-    def get_files_dict(self, vo_file):
+    def get_files_dict(self, vo_text):
         '''
         Converts the input vo_file to a format suitable for downloading.
 
@@ -168,19 +170,29 @@ class VOHandler:
         -------
             Dictionary containing the files to download.
         '''
-        files_dict = {'w009': {'lat_photon_weekly_w009_p305_v001.fits':
-                                "https://minio.131.154.99.174.myip.cloud.infn.it/spoke3/spoke3/fermi_photon__lat_photon_weekly_w009_p305_v001__0?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=icsc%2F20250612%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20250612T152759Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=a3f3fa3b102e8e9be1cd4d945036e28a33a115ef7d984799e6d46da6a79ae7ad",
-                                'lat_spacecraft_weekly_w009_p310_v001.fits':
-                                'https://minio.131.154.99.174.myip.cloud.infn.it/spoke3/spoke3/fermi_spacecraft__lat_spacecraft_weekly_w009_p310_v001__0?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=icsc%2F20250612%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20250612T152759Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=becb69530294667598f5d8c8fed9fe4c150e3937beb4fe1e7c7ba0c775fb265b'},
-                    'w010': {'lat_photon_weekly_w010_p305_v001.fits':
-                            "https://minio.131.154.99.174.myip.cloud.infn.it/spoke3/spoke3/fermi_photon__lat_photon_weekly_w010_p305_v001__0?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=icsc%2F20250612%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20250612T152759Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=bedcb5c3de69872ba687f7df574d805d14fca5be4fe4c0e37713cc0546793e26",
-                            'lat_spacecraft_weekly_w010_p310_v001.fits':
-                            'https://minio.131.154.99.174.myip.cloud.infn.it/spoke3/spoke3/fermi_spacecraft__lat_spacecraft_weekly_w010_p310_v001__0?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=icsc%2F20250612%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20250612T152759Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=1a42075654f2f932332aea8a2ca7dcc65a84eb318530c83f581024c6dba0f021'}
-            }
-        files_dict = {'w009': {'lat_photon_weekly_w009_p305_v001.fits':
-                                "https://heasarc.gsfc.nasa.gov/FTP/fermi/data/lat/weekly/photon/lat_photon_weekly_w009_p305_v001.fits",
-                                'lat_spacecraft_weekly_w009_p310_v001.fits':
-                                'https://heasarc.gsfc.nasa.gov/FTP/fermi/data/lat/weekly/spacecraft/lat_spacecraft_weekly_w009_p310_v001.fits'}
-            }
-        
+
+        vo_xml = ET.fromstring(vo_text)
+        ns = {'vot': 'http://www.ivoa.net/xml/VOTable/v1.3'}
+
+        files_dict = {}
+
+        for table in vo_xml.findall('.//vot:TABLE', ns):
+            fields = [field.attrib['name'] for field in table.findall('vot:FIELD', ns)]
+            did_idx = fields.index('did_name')
+            url_idx = fields.index('access_url')
+
+            for tr in table.findall('.//vot:TR', ns):
+                tds = tr.findall('vot:TD', ns)
+                did_name = tds[did_idx].text
+                access_url = tds[url_idx].text
+
+                if not did_name.endswith('.fits'):
+                    file_name = did_name + '.fits'
+
+                week_match = re.search(r'w\d{3}', file_name)
+                week = week_match.group(0) if week_match else 'unknown'
+
+                if week not in files_dict:
+                    files_dict[week] = {}
+                files_dict[week][file_name] = access_url
         return files_dict
