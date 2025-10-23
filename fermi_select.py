@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(mess
 fermifilters = Blueprint('FermiFilters', __name__)
 fermifilters.secret_key = '1234'
 
-@fermifilters.route('/tool', methods=['GET', 'POST']) # should only be POST
+@fermifilters.route('/tool', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         ct = request.headers.get('Content-Type', '')
@@ -22,9 +22,12 @@ def index():
             vo_text = request.data.decode('utf-8', errors='ignore')
             with open(os.path.join(TMP_DIR, 'fermi_vo.xml'), 'w') as f:
                 f.write(vo_text)
+            return jsonify({'status': 'ok', 'redirect': '/process_vo'})
         else:
             return render_template('error.html', error_message="Invalid content type: expected a VO table in XML format.")
-    return render_template('loading.html')
+        
+    elif request.method == 'GET':
+        return render_template('loading.html')
 
 @fermifilters.route('/process_vo', methods=['GET'])
 def process_vo():
@@ -47,7 +50,7 @@ def process_vo():
         ft1_file = ft1_list[0]
         ft2_file = ft2_list[0]
     plot_filename = os.path.join(TMP_DIR, "plot.png")
-    Plotter().plot_ft_data([ft1_file], x='RA', y='DEC', plot_filename=plot_filename)
+    Plotter().plot_ft_data([ft1_file], x='RA', y='DEC', plot_filename=plot_filename, coord='G', projection='mollweide')
     info_dict_ft1 = FitsReader().read_info_from_ft1(ft1_file)
     info_dict_ft2 = FitsReader().read_info_from_ft2(ft2_file)
     plot_url = None
@@ -72,7 +75,9 @@ def apply_filters():
     select_dict = json.loads(request.form.get('select_dict', None))
     maketime_dict = json.loads(request.form.get('maketime_dict', None))
     ecliptic_cut_dict = json.loads(request.form.get('ecliptic_cut_dict', None))
-    update_plot = request.form.get('update_plot', 'off') == 'on'
+    plot_coord = request.form.get('plot_coord', 'G')
+    plot_projection = request.form.get('plot_projection', 'mollweide')
+    update_plot = True # request.form.get('update_plot', 'off') == 'on'
     select_output_filepath = os.path.join(TMP_DIR, f"select_{ft1_filename}")
     mktime_output_filepath = os.path.join(TMP_DIR, f"mktime_{ft1_filename}")
     ecliptic_cut_output_filepath = os.path.join(TMP_DIR, f"ecliptic_cut_{ft1_filename}")
@@ -97,7 +102,7 @@ def apply_filters():
         if update_plot:
             plots_list.append(ecliptic_cut_output_filepath)
     if update_plot:
-        Plotter().plot_ft_data(plots_list, x='RA', y='DEC', plot_filename=plot_filename)
+        Plotter().plot_ft_data(plots_list, x='RA', y='DEC', plot_filename=plot_filename, coord=plot_coord, projection=plot_projection)
     return jsonify({"plot_url": plot_filename})
 
 

@@ -1,5 +1,5 @@
 import os
-import subprocess
+# import subprocess
 import logging
 from astropy.io import fits
 from astropy.coordinates import SkyCoord

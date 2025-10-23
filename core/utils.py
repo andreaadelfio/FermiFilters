@@ -4,39 +4,37 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from astropy.io import fits
 import numpy as np
-import requests
 from .config import TMP_DIR
 import logging
-# animation support removed: keep plotting only
 import xml.etree.ElementTree as ET
-import re
-import healpy as hp
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 
 class Plotter:
     matplotlib.use('Agg')
 
-    def plot_mollview(self, ft_file_list, x, y, coord='C'):
+    def plot_ft_data(self, ft_file_list, x, y, plot_filename, coord='C', projection=None):
         """
-        Crea una serie di plot in proiezione Mollweide (hp.mollview) a partire dai dati
-        di evento (x, y) contenuti nei file FITS.
-
-        Gli eventi (x, y) vengono prima binnati in una mappa HEALPix.
+        Crea una serie di plot in proiezione usando matplotlib,
+        plottando i punti (x, y) direttamente.
 
         Args:
             ft_file_list (list): Lista dei percorsi dei file FITS.
             x (str): Nome della colonna FITS da usare come Longitudine (es. 'RA' o 'PHI').
             y (str): Nome della colonna FITS da usare come Latitudine (es. 'DEC' o 'THETA').
-            coord (str o sequence): Sistema di coordinate del plot ('G', 'E', 'C'). Se non specificato,
-                                    si presume che i dati siano in coordinate Celestiali ('C').
+            plot_filename (str): Nome del file di output per il plot.
+            coord (str): Sistema di coordinate ('G' per galattiche, 'C' per celestiali).
+            projection: Proiezione matplotlib (default: None).
+        Returns:
+            fig: Matplotlib figure object.
         """
+        if projection == 'none':
+            projection = None
+        fig, axs = plt.subplots(len(ft_file_list), 1, figsize=(12, 9), subplot_kw={'projection': projection})
+        if len(ft_file_list) == 1:
+            axs = [axs]
 
-        fig = plt.figure(figsize=(12, 9))
-        nside = 256
-        npix = hp.nside2npix(nside)
-        
-        for i, ft_file in enumerate(ft_file_list):
+        for i, (ax, ft_file) in enumerate(zip(axs, ft_file_list)):
             with fits.open(ft_file) as hdul:
                 ft_data = hdul[1].data
                 
@@ -47,68 +45,44 @@ class Plotter:
                     c = SkyCoord(ra=xdata*u.degree, dec=ydata*u.degree, frame='fk5').galactic
                     lon = c.l.deg
                     lat = c.b.deg
+                    xlabel = 'Galactic Longitude [deg]'
+                    ylabel = 'Galactic Latitude [deg]'
                 elif coord == 'C':
                     lon = xdata
                     lat = ydata
+                    xlabel = 'RA [deg]'
+                    ylabel = 'DEC [deg]'
                 else:
                     raise ValueError(f"Coordinate system '{coord}' non riconosciuto. Usa 'G' o 'C'.")
-                phi = np.radians(lon)
-                theta = np.radians(90.0 - lat)
-
-                ipix = hp.ang2pix(nside, theta, phi)
-                hpx_map = np.bincount(ipix, minlength=npix).astype(float)
-                fig.add_subplot(len(ft_file_list), 1, i + 1, projection='mollweide')
-                hp.mollview(hpx_map, fig=i, title=os.path.basename(ft_file), cmap='magma', norm='hist', hold=True, cbar=False)
-                hp.graticule()
-        return fig
-
-    def plot_2d_histogram(self, ft_file_list, x, y):
-        fig, axs = plt.subplots(len(ft_file_list), 1, sharex=True, figsize=(12, 9))
-        if len(ft_file_list) == 1:
-            axs = [axs]
-        for i, (ax, ft_file) in enumerate(zip(axs, ft_file_list)):
-            with fits.open(ft_file) as hdul:
-                ft_data = hdul[1].data
-
-                xdata = np.nan_to_num(ft_data[x], nan=0.0, posinf=0.0, neginf=0.0)
-                ydata = np.nan_to_num(ft_data[y], nan=0.0, posinf=0.0, neginf=0.0)
-
+                
+                lon = (lon + 180) % 360 - 180
+                
+                lon_rad = np.radians(lon)
+                lat_rad = np.radians(lat)
+                
+                mask = np.isfinite(lon_rad) & np.isfinite(lat_rad)
+                lon_rad = lon_rad[mask]
+                lat_rad = lat_rad[mask]
+                
                 xbins = 200
                 ybins = 200
 
-                H, xedges, yedges = np.histogram2d(xdata, ydata, bins=[xbins, ybins])
+                H, xedges, yedges = np.histogram2d(lon_rad, lat_rad, bins=[xbins, ybins])
                 H_plot = H + 1.0
-                pcm = ax.pcolormesh(xedges, yedges, H_plot.T, cmap='viridis', norm=LogNorm(vmin=1, vmax=H_plot.max()))
+                pcm = ax.pcolormesh(xedges, yedges, H_plot.T, cmap='magma', norm=LogNorm(vmin=1, vmax=H_plot.max()))
                 fig.colorbar(pcm, ax=ax)
-
-                if i == len(ft_file_list) - 1:
-                    ax.set_xlabel(f'{x} [{hdul[1].columns[x].unit}]')
-                ax.set_ylabel(f'{y} [{hdul[1].columns[y].unit}]')
                 ax.set_title(os.path.basename(ft_file))
-                ax.set_xlim(0, 360)
-                ax.set_ylim(-90, 90)
-                ax.grid()
-        return fig
-    
-    def plot_ft_data(self, ft_file_list, x, y, plot_filename):
-        '''
-        Plots the input FT data.
+                ax.grid(True)
+                ax.set_xlabel(xlabel)
+                ax.set_ylabel(ylabel)
 
-        Parameters:
-        ----------
-            ft_file_list: List of FT files.
-            x: X-axis column name.
-            y: Y-axis column name.
-            plot_filename: Output plot filename.
-        '''
-        if True:
-            fig = self.plot_mollview(ft_file_list, x, y, 'C')
-            plt.tight_layout()
-        else:
-            fig = self.plot_2d_histogram(ft_file_list, x, y)
+        plt.tight_layout()
+        if projection is not None:
+            fig.subplots_adjust(top=0.95, right=0.99, left=0., bottom=0.02, hspace=0.2)
         plt.savefig(plot_filename, dpi=400)
         plt.close(fig)
-
+        return fig
+    
 
 class FitsReader:
 

@@ -74,7 +74,9 @@ $(function() {
             const select_dict = $('#ft1_filters_dict').val();
             const maketime_dict = $('#ft2_filters_dict').val();
             const ecliptic_cut_dict = $('#ecliptic_cut_dict').val();
-            const update_plot = $('#update-plot-btn').is(':checked') ? 'on' : 'off';
+            const update_plot = 'on'; //$('#update-plot-btn').is(':checked') ? 'on' : 'off';
+            const plot_projection = $('#plot-projection').val();
+            const plot_coord = $('#plot-coord').val();
             $.ajax({
                 url: '/apply_filters',
                 type: 'POST',
@@ -82,7 +84,9 @@ $(function() {
                     maketime_dict: maketime_dict,
                     select_dict: select_dict,
                     ecliptic_cut_dict: ecliptic_cut_dict,
-                    update_plot: update_plot
+                    update_plot: update_plot,
+                    plot_projection: plot_projection,
+                    plot_coord: plot_coord
                 },
                 success: function(resp) {
                     if (resp.error) {
@@ -90,9 +94,9 @@ $(function() {
                     } else {
                         if (resp.plot_url && update_plot === 'on') {
                             $('#plot-image').attr('src', resp.plot_url + '?' + new Date().getTime()).show();
-                            $('#plot-box').html(`<img id="plot-image" src="${resp.plot_url + '?' + new Date().getTime()}" alt="Filtered Data Plot" style="max-width: 100%; max-height: 100%;">`);
+                            $('#plot-case').html(`<img id="plot-image" src="${resp.plot_url + '?' + new Date().getTime()}" alt="Filtered Data Plot" style="max-width: 100%; max-height: 100%;">`);
                         } else {
-                            $('#plot-box').html('<p>No available plot</p>');
+                            $('#plot-case').html('<p>No available plot</p>');
                         }
 
                         let filtersApplied = [];
@@ -112,6 +116,10 @@ $(function() {
         }
     });
 });
+
+function updatePlot() {
+    $('#apply-filters').click();
+}
 
 function getResolution(info) {
     const difference = info.max - info.min;
