@@ -77,6 +77,7 @@ $(function() {
             const update_plot = 'on'; //$('#update-plot-btn').is(':checked') ? 'on' : 'off';
             const plot_projection = $('#plot-projection').val();
             const plot_coord = $('#plot-coord').val();
+            const id = $('#id').val();
             $.ajax({
                 url: '/apply_filters',
                 type: 'POST',
@@ -86,7 +87,8 @@ $(function() {
                     ecliptic_cut_dict: ecliptic_cut_dict,
                     update_plot: update_plot,
                     plot_projection: plot_projection,
-                    plot_coord: plot_coord
+                    plot_coord: plot_coord,
+                    id: id
                 },
                 success: function(resp) {
                     if (resp.error) {

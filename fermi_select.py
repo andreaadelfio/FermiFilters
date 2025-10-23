@@ -1,12 +1,17 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
 import json
 import os
 import logging
 import zipfile
 import io
+import uuid
 from flask import Blueprint, render_template, request, jsonify, session, send_file
-from core.engine import FiltersEngine
-from core.utils import Plotter, FitsReader, FilesHandler, VOHandler
-from core.config import TMP_DIR
+from cryptography.fernet import Fernet
+from FermiFilters.core.config import TMP_DIR
+from FermiFilters.core.engine import FiltersEngine
+from FermiFilters.core.utils import Plotter, FitsReader, FilesHandler, VOHandler
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
 
@@ -20,54 +25,73 @@ def index():
         ct = request.headers.get('Content-Type', '')
         if 'xml' in ct:
             vo_text = request.data.decode('utf-8', errors='ignore')
-            with open(os.path.join(TMP_DIR, 'fermi_vo.xml'), 'w') as f:
-                f.write(vo_text)
-            return jsonify({'status': 'ok', 'redirect': '/process_vo'})
+            user_path, files_dict = VOHandler().get_files_dict(vo_text)
+            if not user_path:
+                user_path = os.path.dirname(TMP_DIR)
+            secret_key = Fernet.generate_key()
+            f = Fernet(secret_key)
+            encrypted_key = f.encrypt(user_path.encode()).decode()
+            user_path = os.path.join(os.path.dirname(TMP_DIR), encrypted_key)
+            files_dict_path = os.path.join(user_path, 'files_dict.json')
+            os.makedirs(user_path, exist_ok=True)
+            with open(files_dict_path, 'w') as f:
+                json.dump(files_dict, f)
+            return jsonify({'status': 'ok', 'id': encrypted_key})
         else:
             return render_template('error.html', error_message="Invalid content type: expected a VO table in XML format.")
         
     elif request.method == 'GET':
-        return render_template('loading.html')
+        id = request.args.get('id', None)
+        return render_template('loading.html',
+                id=id
+                )
 
 @fermifilters.route('/process_vo', methods=['GET'])
 def process_vo():
-    vo_file = os.path.join(TMP_DIR, 'fermi_vo.xml')
-    with open(vo_file, 'r') as f:
-        vo_text = f.read()
-    files_dict = VOHandler().get_files_dict(vo_text)
-    fts_list = FilesHandler().download_from_url(files_dict)
-    weeks_list = files_dict.keys()
+    id = request.args.get('id')
+    user_path = os.path.join(os.path.dirname(TMP_DIR), id)
+    files_dict_path = os.path.join(user_path, 'files_dict.json')
+    with open(files_dict_path, 'r') as f:
+        files_dict = json.load(f)
+    fts_list = FilesHandler().download_from_url(files_dict, user_path)
+    weeks_list = list(files_dict.keys())
     ft1_list = fts_list['photon']
     ft2_list = fts_list['spacecraft']
     if len(ft1_list) > 1:
-        ft1_output_filepath = os.path.join(TMP_DIR, f"merged_photon_{'_'.join(weeks_list)}.fits")
+        ft1_output_filepath = os.path.join(user_path, f"merged_photon_{'_'.join(weeks_list)}.fits")
         FiltersEngine().gtmerge(ft1_list, ft1_output_filepath)
         ft1_file = ft1_output_filepath
-        ft2_output_filepath = os.path.join(TMP_DIR, f"merged_spacecraft_{'_'.join(weeks_list)}.fits")
+        ft2_output_filepath = os.path.join(user_path, f"merged_spacecraft_{'_'.join(weeks_list)}.fits")
         FiltersEngine().ft2_merge(ft2_list, ft2_output_filepath)
         ft2_file = ft2_output_filepath
     else:
         ft1_file = ft1_list[0]
         ft2_file = ft2_list[0]
-    plot_filename = os.path.join(TMP_DIR, "plot.png")
+    plot_filename = os.path.join(user_path, "plot.png")
     Plotter().plot_ft_data([ft1_file], x='RA', y='DEC', plot_filename=plot_filename, coord='G', projection='mollweide')
     info_dict_ft1 = FitsReader().read_info_from_ft1(ft1_file)
     info_dict_ft2 = FitsReader().read_info_from_ft2(ft2_file)
     plot_url = None
     if os.path.exists(plot_filename):
-        plot_url = plot_filename
+        # Calculate relative URL from static directory
+        static_dir = os.path.join(os.path.dirname(__file__), 'static')
+        rel_path = os.path.relpath(plot_filename, static_dir)
+        plot_url = f"/static/{rel_path.replace(os.sep, '/')}"
     session['ft1_file_name'] = ft1_file
     session['ft2_file_name'] = ft2_file
-    session['plot_url'] = plot_url
+    session['plot_url'] = plot_filename  # Keep filesystem path in session for internal use
     return render_template('template.html',
                             info_dict_ft1=info_dict_ft1,
                             info_dict_ft2=info_dict_ft2,
                             ft1_file_name=ft1_file,
                             ft2_file_name=ft2_file,
-                            plot_url=plot_url)
+                            plot_url=plot_url,
+                            id=id)
 
 @fermifilters.route('/apply_filters', methods=['POST'])
 def apply_filters():
+    id = request.form.get('id', None)
+    user_path = os.path.join(os.path.dirname(TMP_DIR), id)
     plot_filename = session.get('plot_url')
     ft1_filepath = session.get('ft1_file_name')
     ft2_filepath = session.get('ft2_file_name')
@@ -78,9 +102,9 @@ def apply_filters():
     plot_coord = request.form.get('plot_coord', 'G')
     plot_projection = request.form.get('plot_projection', 'mollweide')
     update_plot = True # request.form.get('update_plot', 'off') == 'on'
-    select_output_filepath = os.path.join(TMP_DIR, f"select_{ft1_filename}")
-    mktime_output_filepath = os.path.join(TMP_DIR, f"mktime_{ft1_filename}")
-    ecliptic_cut_output_filepath = os.path.join(TMP_DIR, f"ecliptic_cut_{ft1_filename}")
+    select_output_filepath = os.path.join(user_path, f"select_{ft1_filename}")
+    mktime_output_filepath = os.path.join(user_path, f"mktime_{ft1_filename}")
+    ecliptic_cut_output_filepath = os.path.join(user_path, f"ecliptic_cut_{ft1_filename}")
     if not select_dict and not maketime_dict and not ecliptic_cut_dict:
         return jsonify({"plot_url": None})
     plots_list = [ft1_filepath]
@@ -103,15 +127,25 @@ def apply_filters():
             plots_list.append(ecliptic_cut_output_filepath)
     if update_plot:
         Plotter().plot_ft_data(plots_list, x='RA', y='DEC', plot_filename=plot_filename, coord=plot_coord, projection=plot_projection)
-    return jsonify({"plot_url": plot_filename})
+    # TO BE CHECKED
+    if plot_filename and os.path.exists(plot_filename):
+        static_dir = os.path.join(os.path.dirname(__file__), 'static')
+        rel_path = os.path.relpath(plot_filename, static_dir)
+        plot_url_response = f"/static/{rel_path.replace(os.sep, '/')}"
+    else:
+        plot_url_response = None
+    return jsonify({"plot_url": plot_url_response})
 
 
 @fermifilters.route('/download_all')
 def download_all():
+    id = request.args.get('id')
+    user_path = os.path.join(os.path.dirname(TMP_DIR), id)
+    print(user_path)
     files_to_zip = []
-    for fname in os.listdir(TMP_DIR):
+    for fname in os.listdir(user_path):
         if fname.endswith('.fits') or fname.endswith('.png'):
-            files_to_zip.append(os.path.join(TMP_DIR, fname))
+            files_to_zip.append(os.path.join(user_path, fname))
 
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w') as zipf:

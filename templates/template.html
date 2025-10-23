@@ -13,6 +13,7 @@
             var ft1_file_name = "{{ ft1_file_name }}";
             var ft2_file_name = "{{ ft2_file_name }}";
             var initialPlotUrl = "{{ plot_url if plot_url else '' }}";
+            var id = "{{ id }}";
         </script>
         <script src="{{ url_for('static', filename='script.js') }}"></script>
     </head>
@@ -119,7 +120,7 @@
                         <div>
                             <button type="button" id="apply-filters">Save Results</button>
                             <button type="button" onclick="resetSliders()">Reset</button>
-                            <button type="button" style="float: right;" onclick="window.location.href='/download_all'">Download All</button>
+                            <button type="button" style="float: right;" onclick="window.location.href='/download_all?id={{ id }}'">Download All</button>
                         </div>
                     </div>
                 </form>
@@ -142,9 +143,16 @@
                             Projection:
                             <select id="plot-projection" onchange="updateFilterExpr()" default="mollweide">
                                 <option value="mollweide">Mollweide</option>
-                                <option value="none">None</option>
                                 <option value="aitoff">Aitoff</option>
                                 <option value="hammer">Hammer</option>
+                                <option value="none">None</option>
+                            </select>
+                        </label>
+                        <label style="display: inline-block; margin-right: 10px;">
+                            Coordinate System:
+                            <select id="plot-coord" onchange="updateFilterExpr()" default="G">
+                                <option value="G">Galactic</option>
+                                <option value="C">Celestial</option>
                             </select>
                         </label>
                         <button type="button" onclick="updatePlot()">Update Plot</button>
@@ -153,6 +161,7 @@
                 <input type="hidden" id="ft1_filters_dict" value="{}">
                 <input type="hidden" id="ft2_filters_dict" value="{}">
                 <input type="hidden" id="ecliptic_cut_dict" value="{}">
+                <input type="hidden" id="id" value="{{ id }}">
             </div>
         </div>
     </body>

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from astropy.io import fits
 import numpy as np
-from .config import TMP_DIR
+import requests
 import logging
 import xml.etree.ElementTree as ET
 import astropy.units as u
@@ -160,7 +160,7 @@ class FilesHandler:
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
-    def download_from_url(self, files_dict):
+    def download_from_url(self, files_dict, tmp_dir):
         '''
         Downloads a file from the given URL.
 
@@ -176,8 +176,13 @@ class FilesHandler:
         for week, week_dict in files_dict.items():
             for file_name, url in week_dict.items():
                 try:
-                    output_file_path = os.path.join(TMP_DIR, file_name)
+                    output_file_path = os.path.join(tmp_dir, file_name)
                     self.logger.info(f" Starting download from {url} to {output_file_path}")
+                    if os.path.exists(output_file_path):
+                        self.logger.info(f" File already exists: {output_file_path}, skipping download.")
+                        ft_type = 'photon' if 'photon' in file_name else 'spacecraft'
+                        files_list[ft_type].append(output_file_path)
+                        continue
                     response = requests.get(url)
                     response.raise_for_status()
                     with open(output_file_path, 'wb') as f:
@@ -222,16 +227,18 @@ class VOHandler:
             did_idx = fields.index('did_name')
             url_idx = fields.index('access_url')
             week_idx = fields.index('week')
+            user_idx = fields.index('user')
 
             for tr in table.findall('.//vot:TR', ns):
                 tds = tr.findall('vot:TD', ns)
                 did_name = tds[did_idx].text
                 access_url = tds[url_idx].text
                 week = tds[week_idx].text
+                user = tds[user_idx].text
                 if not did_name.endswith('.fits'):
                     file_name = did_name + '.fits'
 
                 if week not in files_dict:
                     files_dict[week] = {}
                 files_dict[week][file_name] = access_url
-        return files_dict
+        return user, files_dict

@@ -1,5 +1,4 @@
 import os
-# import subprocess
 import logging
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
@@ -7,6 +6,16 @@ from scipy.interpolate import interp1d
 import astropy.units as u
 import numpy as np
 import gt_apps
+
+# Ensure Fermi tools are in PATH
+fermi_bin = '/home/adelfio/miniconda3/envs/fermi/bin'
+if fermi_bin not in os.environ.get('PATH', ''):
+    os.environ['PATH'] = fermi_bin + ':' + os.environ.get('PATH', '')
+
+# Set CALDB environment variables
+os.environ['CALDB'] = '/home/adelfio/miniconda3/envs/fermi/share/fermitools/data/caldb'
+os.environ['CALDBCONFIG'] = '/home/adelfio/miniconda3/envs/fermi/share/fermitools/data/caldb/software/tools/caldb.config'
+os.environ['REFDATA'] = '/home/adelfio/miniconda3/envs/fermi/share/fermitools/refdata'
 from astropy.table import Table, vstack
 
 
@@ -90,7 +99,7 @@ class FiltersEngine:
         logging.info(" gtmerge: running with following parameters \n - infile: %s\n - outfile: %s", gt_apps.filter['infile'], gt_apps.filter['outfile'])
         try:
             gt_apps.filter.run(print_command=False)
-            os.remove('gtselect.par')
+            # os.remove('gtselect.par')
         except Exception as e:
             logging.error("Error during gtmerge: %s", e)
             return False
@@ -126,7 +135,7 @@ class FiltersEngine:
         logging.info(" gtselect: running with following parameters \n - infile: %s\n - outfile: %s\n - zmax: %s\n - zmin: %s\n - emin: %s\n - emax: %s\n - ra: %s\n - dec: %s\n - rad: %s", gt_apps.filter['infile'], gt_apps.filter['outfile'], gt_apps.filter['zmax'], gt_apps.filter['zmin'], gt_apps.filter['emin'], gt_apps.filter['emax'], gt_apps.filter['ra'], gt_apps.filter['dec'], gt_apps.filter['rad'])
         try:
             gt_apps.filter.run(print_command=False)
-            os.remove('gtselect.par')
+            # os.remove('gtselect.par')
         except Exception as e:
             logging.error("Error during gtselect: %s", e)
             return False
@@ -169,7 +178,7 @@ class FiltersEngine:
         logging.info(" gtmktime: running with following parameters \n - scfile: %s\n - evfile: %s\n - outfile: %s\n - filter: %s", gt_apps.maketime['scfile'], gt_apps.maketime['evfile'], gt_apps.maketime['outfile'], gt_apps.maketime['filter'])
         try:
             gt_apps.maketime.run(print_command=False)
-            os.remove('gtmktime.par')
+            # os.remove('gtmktime.par')
         except Exception as e:
             logging.error("Error during gtmktime: %s", e)
             return False

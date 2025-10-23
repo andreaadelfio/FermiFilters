@@ -6,3 +6,4 @@ numpy
 requests
 scipy
 healpy
+cryptography

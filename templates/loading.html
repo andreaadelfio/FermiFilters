@@ -10,7 +10,7 @@
         <div class="spinner"></div>
     </div>
   <script>
-    fetch('/process_vo', {
+    fetch('/process_vo?id={{ id }}', {
     method: 'GET',
     })
     .then(r => r.text())
