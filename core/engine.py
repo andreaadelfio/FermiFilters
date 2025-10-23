@@ -67,7 +67,7 @@ class FiltersEngine:
             logging.error("Error during pure Python spacecraft merge: %s", e)
             return False
 
-    def gtmerge(self, ft1_file_list, output_file) -> bool:
+    def gtmerge(self, ft1_file_list, output_file, user_path) -> bool:
         '''
         Merges multiple FT1 files into a single FT1 file.
 
@@ -75,16 +75,18 @@ class FiltersEngine:
         ----------
             ft1_file_list: List of FT1 files to be merged.
             output_file: Output FT1 file.
+            user_path: Path to the user directory.
         
         Returns:
         -------
             True if the merge was successful, False otherwise.
         '''
-        with open('static/andrea-adelfio_tmp/ft1_to_be_merged.txt', 'w') as f:
+        infile_path = os.path.join(user_path, 'ft1_to_be_merged.txt')
+        with open(infile_path, 'w') as f:
             for ft1_file in ft1_file_list:
                 f.write(ft1_file + '\n')
         logging.info(" gtmerge: %s", ft1_file_list)
-        gt_apps.filter['infile'] = 'static/andrea-adelfio_tmp/ft1_to_be_merged.txt'
+        gt_apps.filter['infile'] = infile_path
         gt_apps.filter['evclass'] = 128
         gt_apps.filter['evtable'] = "EVENTS"
         gt_apps.filter['evtype'] = 3

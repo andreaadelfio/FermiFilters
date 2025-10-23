@@ -59,7 +59,7 @@ def process_vo():
     ft2_list = fts_list['spacecraft']
     if len(ft1_list) > 1:
         ft1_output_filepath = os.path.join(user_path, f"merged_photon_{'_'.join(weeks_list)}.fits")
-        FiltersEngine().gtmerge(ft1_list, ft1_output_filepath)
+        FiltersEngine().gtmerge(ft1_list, ft1_output_filepath, user_path)
         ft1_file = ft1_output_filepath
         ft2_output_filepath = os.path.join(user_path, f"merged_spacecraft_{'_'.join(weeks_list)}.fits")
         FiltersEngine().ft2_merge(ft2_list, ft2_output_filepath)
